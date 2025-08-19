@@ -47,6 +47,11 @@ async def ws_handler(websocket, path=None):
                 data = json.loads(message)
                 if isinstance(data, dict) and data.get("type") == "collision" and data.get("collision"):
                     collision_count += 1
+                # NEW: Re-broadcast simulator events to all connected WS clients so
+                # external controllers (e.g., auto_navigator.py) can receive them.
+                # We only broadcast non-command event-style messages identified by a 'type' field.
+                if isinstance(data, dict) and data.get("type"):
+                    broadcast(data)
             except Exception:
                 pass
             print("Received from simulator:", message)
@@ -173,6 +178,18 @@ def reset():
     return jsonify({'status': 'reset broadcast', 'collisions': collision_count})
 
 # ---------------------------
+# WS Status (helper)
+# ---------------------------
+@app.route('/ws/status', methods=['GET'])
+def ws_status():
+    """Report how many WebSocket clients are connected (e.g., the simulator page)."""
+    try:
+        count = len(connected)
+    except Exception:
+        count = 0
+    return jsonify({'clients': count})
+
+# ---------------------------
 # Flask Thread
 # ---------------------------
 def start_flask():
@@ -184,8 +201,8 @@ def start_flask():
 async def main():
     global async_loop
     async_loop = asyncio.get_running_loop()
-    ws_server = await websockets.serve(ws_handler, "localhost", 8080)
-    print("WebSocket server started on ws://localhost:8080")
+    ws_server = await websockets.serve(ws_handler, "0.0.0.0", 8080)
+    print("WebSocket server started on ws://0.0.0.0:8080 (reachable at ws://127.0.0.1:8080)")
     await ws_server.wait_closed()
 
 # ---------------------------

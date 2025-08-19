@@ -190,7 +190,9 @@
   }
 
   // === WEBSOCKET ===
-  const ws = new WebSocket("ws://localhost:8080");
+  // Use current page hostname to avoid IPv4/IPv6/localhost mismatches.
+  const wsHost = (window.location && window.location.hostname) ? window.location.hostname : "127.0.0.1";
+  const ws = new WebSocket(`ws://${wsHost}:8080`);
   ws.onopen = () => {
     console.log("WebSocket connected");
     ws.send(JSON.stringify({ type: "connection", message: "Robot simulator connected." }));
@@ -426,6 +428,9 @@
         }));
         // visual feedback
         body.material.color.set(0x00ffff);
+        // Stop any further motion immediately to avoid moving past the goal
+        moving = false;
+        targetPos = null;
       }
     }
 
